@@ -1,17 +1,6 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
     "incremental": true,
     "plugins": [
       {
@@ -19,8 +8,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@kiroku/ui": ["../../packages/ui/src/index.ts"]
+      // `baseUrl` 이 루트 기준이므로, `web` 앱 내부를 가리키도록 수정
+      "@/*": ["apps/web/src/*"],
+      // 루트의 `paths`가 덮어쓰여졌으므로, 워크스페이스 경로를 다시 정의
+      "@kiroku/ui": ["packages/ui/src/index.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

@@ -15,8 +15,8 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          primary: "#475569", // Slate
-          accent: "#14b8a6", // Teal
+          primary: "#475569",
+          accent: "#14b8a6",
         },
       },
       keyframes: {

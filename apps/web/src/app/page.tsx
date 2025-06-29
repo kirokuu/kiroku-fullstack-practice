@@ -19,7 +19,7 @@ export default function HomePage() {
           <br />
           가장 중요한 것에 집중할 수 있도록, Kiroku가 함께합니다.
         </p>
-        <Button>
+        <Button asChild>
           <Link href="/login">지금 시작하기</Link>
         </Button>
       </section>
