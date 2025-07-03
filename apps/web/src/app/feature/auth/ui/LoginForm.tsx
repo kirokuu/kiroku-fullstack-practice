@@ -15,11 +15,10 @@ export default function LoginPage() {
 
   const fetchCsrfToken = async () => {
     try {
-      const response = await fetch("/api/auth/csrf");
+      const response = await fetch("http://localhost:8080/api/auth/csrf");
       const data = await response.json();
 
-      if (data.statue === "success") {
-        // 오타 수정 필요: status
+      if (data.status === "success") {
         setCsrfToken(data.data.csrfToken);
         console.log("✅ CSRF 토큰 받아옴:", data.data.csrfToken);
       }
@@ -40,7 +39,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

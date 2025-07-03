@@ -80,3 +80,27 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
+
+# Compiled output
+/dist
+/**/*.js
+/**/*.js.map
+/**/*.d.ts
+*.tsbuildinfo
+tsconfig.build.tsbuildinfo
+
+# Prisma
+**/libquery_engine*
+**/prisma/client
+**/generated/prisma
+
+# 기존 항목들
+.turbo
+*.log
+turbo.log
+.turbo/cookies
+node_modules
+.env
+.env.local
+.DS_Store
+coverage

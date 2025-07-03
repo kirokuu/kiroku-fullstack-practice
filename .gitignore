@@ -1,1 +1,29 @@
+# Turbo
+.turbo
+*.log
+turbo.log
+.turbo/cookies
+
+# 기타 일반적인 무시 항목
 node_modules
+dist
+build
+.env
+.env.local
+.env.*
+*.pem
+.DS_Store
+coverage
+
+# Compiled output
+/dist
+/**/*.js
+/**/*.js.map
+/**/*.d.ts
+
+# Prisma
+prisma/generated/
+prisma/client/
+**/libquery_engine*
+**/query_engine*
+**/*.prisma.d.ts
