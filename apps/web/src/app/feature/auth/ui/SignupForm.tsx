@@ -1,12 +1,11 @@
 "use client";
-
 import { useState } from "react";
 import { useCsrfToken } from "../hooks/use-csrf-token";
-import { useLogin } from "../hooks/use-login";
+import { useSignup } from "../hooks/use-sign-up";
 
-export function LoginForm() {
+export function SignupForm() {
   const { csrfToken, loading: csrfLoading, error: csrfError } = useCsrfToken();
-  const { login, loading: loginLoading, error: loginError } = useLogin();
+  const { signup, loading: signupLoading, error: signupError } = useSignup();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,10 +14,11 @@ export function LoginForm() {
     e.preventDefault();
 
     if (csrfError || !csrfToken) {
+      // CSRF 토큰 에러는 useCsrfToken 훅에서 처리되므로, 여기서는 추가적인 에러 메시지 설정만.
       return;
     }
 
-    await login({ email, password, csrfToken });
+    await signup({ email, password, csrfToken });
   };
 
   return (
@@ -26,14 +26,14 @@ export function LoginForm() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            로그인
+            회원가입
           </h2>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {(csrfError || loginError) && (
+          {(csrfError || signupError) && (
             <p className="text-red-500 text-center">
-              {csrfError || loginError}
+              {csrfError || signupError}
             </p>
           )}
           <div>
@@ -71,18 +71,18 @@ export function LoginForm() {
           <div>
             <button
               type="submit"
-              disabled={csrfLoading || loginLoading || !csrfToken}
+              disabled={csrfLoading || signupLoading || !csrfToken}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              {csrfLoading || loginLoading ? "로그인 중..." : "로그인"}
+              {csrfLoading || signupLoading ? "가입 중..." : "회원가입"}
             </button>
           </div>
 
           <div className="text-sm text-center">
-            <a href="/signup" className="font-medium text-gray-500">
-              계정이 없으신가요?{" "}
+            <a href="/login" className="font-medium text-gray-500">
+              이미 계정이 있으신가요?{" "}
               <span className="text-indigo-600 hover:text-indigo-500">
-                회원가입
+                로그인
               </span>
             </a>
           </div>

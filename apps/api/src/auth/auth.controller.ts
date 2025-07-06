@@ -1,33 +1,40 @@
-import { Controller, Get, Post, Body, Res, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Res,
+  Req,
+  HttpStatus,
+} from '@nestjs/common';
 import { Response, Request } from 'express';
 import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('api/auth')
 export class AuthController {
-  // CSRF 토큰을 저장할 맵 (실제 프로덕션에서는 Redis 등 사용 권장)
   private csrfTokens: Map<string, { token: string; createdAt: Date }> =
     new Map();
 
+  constructor(private readonly prisma: PrismaService) {}
+
   @Get('csrf')
   getCsrfToken(@Res({ passthrough: true }) res: Response) {
-    // 랜덤 CSRF 토큰 생성
     const csrfToken = crypto.randomBytes(32).toString('hex');
     const tokenId = crypto.randomBytes(8).toString('hex');
 
-    // 토큰 저장 (유효시간 관리를 위해 생성 시간도 함께 저장)
     this.csrfTokens.set(tokenId, {
       token: csrfToken,
       createdAt: new Date(),
     });
 
-    // 토큰 ID를 쿠키에 저장
     res.cookie('csrf_token_id', tokenId, {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24시간
       sameSite: 'strict',
     });
 
-    // 프론트엔드 코드와 일치하는 응답 형식 사용
     return {
       status: 'success',
       data: {
@@ -36,18 +43,76 @@ export class AuthController {
     };
   }
 
-  @Post('login')
-  login(
-    @Body() loginData: { email: string; password: string; csrfToken: string },
+  @Post('signup')
+  async signup(
+    @Body() signupData: { email: string; password: string; csrfToken: string },
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // CSRF 토큰 검증 로직
     const tokenId =
       (req.cookies as Record<string, string | undefined>)['csrf_token_id'] ||
       undefined;
 
     if (!tokenId) {
+      res.status(HttpStatus.BAD_REQUEST);
+      return {
+        status: 'error',
+        message: 'CSRF 토큰이 없습니다.',
+      };
+    }
+
+    const storedTokenData = this.csrfTokens.get(tokenId);
+
+    if (!storedTokenData || storedTokenData.token !== signupData.csrfToken) {
+      res.status(HttpStatus.BAD_REQUEST);
+      return {
+        status: 'error',
+        message: '유효하지 않은 CSRF 토큰입니다.',
+      };
+    }
+
+    this.csrfTokens.delete(tokenId);
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(signupData.password, saltRounds);
+
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email: signupData.email,
+          password: hashedPassword,
+        },
+      });
+
+      res.status(HttpStatus.CREATED);
+      return {
+        status: 'success',
+        data: {
+          message: '회원가입 성공',
+          userId: user.id,
+        },
+      };
+    } catch (e) {
+      res.status(HttpStatus.CONFLICT);
+      return {
+        status: 'error',
+        message: '이미 존재하는 사용자입니다.',
+      };
+    }
+  }
+
+  @Post('login')
+  async login(
+    @Body() loginData: { email: string; password: string; csrfToken: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tokenId =
+      (req.cookies as Record<string, string | undefined>)['csrf_token_id'] ||
+      undefined;
+
+    if (!tokenId) {
+      res.status(HttpStatus.BAD_REQUEST);
       return {
         status: 'error',
         message: 'CSRF 토큰이 없습니다.',
@@ -57,14 +122,39 @@ export class AuthController {
     const storedTokenData = this.csrfTokens.get(tokenId);
 
     if (!storedTokenData || storedTokenData.token !== loginData.csrfToken) {
+      res.status(HttpStatus.BAD_REQUEST);
       return {
         status: 'error',
         message: '유효하지 않은 CSRF 토큰입니다.',
       };
     }
 
-    // 토큰 사용 후 삭제 (일회용)
     this.csrfTokens.delete(tokenId);
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: loginData.email },
+    });
+
+    if (!user) {
+      res.status(HttpStatus.UNAUTHORIZED);
+      return {
+        status: 'error',
+        message: '이메일 또는 비밀번호가 올바르지 않습니다.',
+      };
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      loginData.password,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      res.status(HttpStatus.UNAUTHORIZED);
+      return {
+        status: 'error',
+        message: '이메일 또는 비밀번호가 올바르지 않습니다.',
+      };
+    }
 
     return {
       status: 'success',
