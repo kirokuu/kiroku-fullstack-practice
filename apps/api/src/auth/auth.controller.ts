@@ -11,6 +11,7 @@ import { Response, Request } from 'express';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import * as jwt from 'jsonwebtoken';
 
 @Controller('api/auth')
 export class AuthController {
@@ -20,18 +21,29 @@ export class AuthController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get('csrf')
-  getCsrfToken(@Res({ passthrough: true }) res: Response) {
+  async getCsrfToken(@Res({ passthrough: true }) res: Response) {
     const csrfToken = crypto.randomBytes(32).toString('hex');
     const tokenId = crypto.randomBytes(8).toString('hex');
 
-    this.csrfTokens.set(tokenId, {
-      token: csrfToken,
-      createdAt: new Date(),
-    });
+    try {
+      const createdToken = await this.prisma.csrfToken.create({
+        data: {
+          token: csrfToken,
+          tokenId: tokenId,
+        },
+      });
+      console.log('CSRF 토큰이 데이터베이스에 저장되었습니다.', createdToken);
+    } catch (e) {
+      console.error('토큰 생성 오류:', e);
+      return {
+        status: 'error',
+        message: 'CSRF 토큰 생성에 실패했습니다.',
+      };
+    }
 
     res.cookie('csrf_token_id', tokenId, {
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24시간
+      maxAge: 24 * 60 * 60 * 1000,
       sameSite: 'strict',
     });
 
@@ -119,17 +131,21 @@ export class AuthController {
       };
     }
 
-    const storedTokenData = this.csrfTokens.get(tokenId);
+    const storedTokenData = await this.prisma.csrfToken.findFirst({
+      where: { tokenId: tokenId },
+    });
 
-    if (!storedTokenData || storedTokenData.token !== loginData.csrfToken) {
+    if (
+      !storedTokenData ||
+      storedTokenData.token !== loginData.csrfToken ||
+      storedTokenData.createdAt.getTime() + 24 * 60 * 60 * 1000 < Date.now()
+    ) {
       res.status(HttpStatus.BAD_REQUEST);
       return {
         status: 'error',
         message: '유효하지 않은 CSRF 토큰입니다.',
       };
     }
-
-    this.csrfTokens.delete(tokenId);
 
     const user = await this.prisma.user.findUnique({
       where: { email: loginData.email },
@@ -155,10 +171,31 @@ export class AuthController {
         message: '이메일 또는 비밀번호가 올바르지 않습니다.',
       };
     }
+    const secret = process.env.JWT_SECRET as string;
 
+    const token = jwt.sign({ userId: user.id }, secret, {
+      expiresIn: '1h',
+    });
+
+    const refreshToken = jwt.sign({ userId: user.id }, secret, {
+      expiresIn: '7d',
+    });
+
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    await this.prisma.csrfToken.delete({
+      where: { tokenId: tokenId },
+    });
+
+    res.status(HttpStatus.OK);
     return {
       status: 'success',
       data: {
+        accessToken: token,
+        refreshToken: refreshToken,
         message: '로그인 성공',
       },
     };

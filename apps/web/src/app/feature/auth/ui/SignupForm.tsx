@@ -14,7 +14,6 @@ export function SignupForm() {
     e.preventDefault();
 
     if (csrfError || !csrfToken) {
-      // CSRF 토큰 에러는 useCsrfToken 훅에서 처리되므로, 여기서는 추가적인 에러 메시지 설정만.
       return;
     }
 

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useMutation } from '@tanstack/react-query';
-import axiosInstance from '../../../../lib/axios-instance';
-
+import { useMutation } from "@tanstack/react-query";
+import axiosInstance from "../../../../lib/axios-instance";
+import { useRouter } from "next/navigation";
 interface LoginProps {
   email: string;
   password: string;
@@ -10,7 +10,12 @@ interface LoginProps {
 }
 
 export function useLogin() {
-  const { mutateAsync, isPending, isError, error } = useMutation<boolean, Error, LoginProps>({
+  const router = useRouter();
+  const { mutateAsync, isPending, isError, error } = useMutation<
+    boolean,
+    Error,
+    LoginProps
+  >({
     mutationFn: async ({ email, password, csrfToken }) => {
       const response = await axiosInstance.post("/auth/login", {
         email,
@@ -18,9 +23,10 @@ export function useLogin() {
         csrfToken,
       });
 
-      if (response.data.status === 'success') {
-        alert("로그인 성공!");
-        // 성공 시 페이지 이동 등
+      if (response.data.status === "success") {
+        localStorage.setItem("accessToken", response.data.data.accessToken);
+        localStorage.setItem("refreshToken", response.data.data.refreshToken);
+        router.push("/");
         return true;
       } else {
         throw new Error(response.data.message || "로그인에 실패했습니다.");
@@ -28,5 +34,9 @@ export function useLogin() {
     },
   });
 
-  return { login: mutateAsync, loading: isPending, error: isError ? error.message : null };
+  return {
+    login: mutateAsync,
+    loading: isPending,
+    error: isError ? error.message : null,
+  };
 }

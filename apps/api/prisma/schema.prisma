@@ -20,12 +20,23 @@ model User {
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  csrfTokens CsrfToken[]
 }
 
 model Post {
   id        Int      @id @default(autoincrement())
   title     String
   content   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CsrfToken {
+  id        Int      @id @default(autoincrement())
+  token     String
+  tokenId String @unique
+  user      User?     @relation(fields: [userId], references: [id])
+  userId    Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
